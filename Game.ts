@@ -15,8 +15,9 @@ abstract class Entity {
 }
 
 class Physics {
-  static refresh_rate_seconds = 0.1;
+  static refresh_rate_seconds = 0.01;
   static gravity = new Point(0, 1500);
+  static ground_y = 600;
 
   constructor(private entities: Entity[]) {
     setInterval(() => this.update(), Physics.refresh_rate_seconds * 1000);
@@ -27,9 +28,7 @@ class Physics {
   }
 
   private static updateEntity(entity: Entity) {
-    var ground_y = 600;
-    if (entity.position.y > ground_y) {
-      entity.position.y = ground_y - (entity.position.y - ground_y);
+    if (entity.position.y > Physics.ground_y) {
       Physics.bounceVertically(entity);
     } else {
       entity.position =
@@ -41,6 +40,7 @@ class Physics {
   }
 
   private static bounceVertically(entity) {
+    entity.position.y = Physics.ground_y - (entity.position.y - Physics.ground_y);
     entity.velocity.y *= -1;
   }
 
