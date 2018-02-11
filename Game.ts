@@ -1,8 +1,8 @@
 class Point {
   constructor(public x: number, public y: number) {}
   static origin = new Point(0, 0);
-  multiply(number: number): Point {
-    return new Point(this.x * number, this.y * number);
+  multiply(number_x: number, number_y: number = number_x): Point {
+    return new Point(this.x * number_x, this.y * number_y);
   }
   add(point: Point): Point {
     return new Point(this.x + point.x, this.y + point.y);
@@ -15,7 +15,7 @@ abstract class Entity {
 }
 
 class Physics {
-  static refresh_rate_seconds = 0.01;
+  static refresh_rate_seconds = 0.02;
   static gravity = new Point(0, 1500);
   static ground_y = 600;
 
@@ -30,7 +30,7 @@ class Physics {
   private static updateEntity(entity: Entity) {
     var nextPosition = Physics.getPositionAfter(Physics.refresh_rate_seconds, entity);
     if (nextPosition.y > Physics.ground_y) {
-      Physics.bounceVertically(entity);
+      Physics.bounceVertically(entity, Physics.ground_y);
     } else {
       entity.position = nextPosition;
       entity.velocity = Physics.getVelocityAfter(Physics.refresh_rate_seconds, entity);
@@ -48,25 +48,22 @@ class Physics {
            .add(entity.acceleration.multiply(time));
   }
 
-  private static bounceVertically(entity) {
-    var timeToBounce = Physics.getRootsForQuadratic(
+  private static bounceVertically(entity, obstacle_y: number) {
+    var timeToBounce = Physics.getPlusRootForQuadratic(
       entity.acceleration.y * 0.5,
       entity.velocity.y,
-      entity.position.y - Physics.ground_y
-    )[0];
-    var velocityAfterBounce = Physics.getVelocityAfter(timeToBounce, entity).multiply(-1);
-    entity.velocity = velocityAfterBounce;
-    entity.position.y = Physics.ground_y;
+      entity.position.y - obstacle_y
+    );
+    var velocityRightBeforeBounce = Physics.getVelocityAfter(timeToBounce, entity);
+    entity.velocity = velocityRightBeforeBounce.multiply(1, -1);
+    entity.position.y = obstacle_y;
     var timeAfterBounce = Physics.refresh_rate_seconds - timeToBounce;
     entity.velocity = Physics.getVelocityAfter(timeAfterBounce, entity);
     entity.position = Physics.getPositionAfter(timeAfterBounce, entity);
   }
 
-  private static getRootsForQuadratic(a, b, c): number[] {
-    var determinant = Math.sqrt(b ** 2 - 4 * a * c);
-    var firstRoot = (- b + determinant) / (2 * a);
-    var secondRoot = (- b - determinant) / (2 * a);
-    return [firstRoot, secondRoot];
+  private static getPlusRootForQuadratic(a, b, c): number {
+    return (- b + Math.sqrt(b ** 2 - 4 * a * c)) / (2 * a);
   }
 
 }
@@ -116,7 +113,7 @@ class Game {
 }
 new Game(
   [
-    new Box(new Point(0, 0), new Point(0, 0), Physics.gravity, new Point(10, 10)),
+    new Box(new Point(50, 300), new Point(100, 0), Physics.gravity, new Point(10, 10)),
     new Box(new Point(0, 300), new Point(0, 0), Physics.gravity, new Point(10, 10))
   ],
   document.getElementById("canvas")
