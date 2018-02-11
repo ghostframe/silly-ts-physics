@@ -1,12 +1,12 @@
 class Point {
   constructor(public x: number, public y: number) {}
   static origin = new Point(0, 0);
-    multiply(number: number) {
-      return new Point(this.x * number, this.y * number);
-    }
-    add(point: Point) {
-      return new Point(this.x + point.x, this.y + point.y);
-    }
+  multiply(number: number): Point {
+    return new Point(this.x * number, this.y * number);
+  }
+  add(point: Point): Point {
+    return new Point(this.x + point.x, this.y + point.y);
+  }
 }
 
 abstract class Entity {
@@ -28,20 +28,45 @@ class Physics {
   }
 
   private static updateEntity(entity: Entity) {
-    if (entity.position.y > Physics.ground_y) {
+    var nextPosition = Physics.getPositionAfter(Physics.refresh_rate_seconds, entity);
+    if (nextPosition.y > Physics.ground_y) {
       Physics.bounceVertically(entity);
     } else {
-      entity.position =
-        entity.position
-        .add(entity.velocity.multiply(Physics.refresh_rate_seconds));
+      entity.position = nextPosition;
+      entity.velocity = Physics.getVelocityAfter(Physics.refresh_rate_seconds, entity);
     }
-    entity.velocity =
-      entity.velocity.add(entity.acceleration.multiply(Physics.refresh_rate_seconds));
+  }
+
+  private static getPositionAfter(time: number, entity: Entity): Point {
+    return entity.position
+           .add(entity.velocity.multiply(time))
+           .add(entity.acceleration.multiply(0.5).multiply(time ** 2));
+  }
+
+  private static getVelocityAfter(time: number, entity: Entity): Point {
+    return entity.velocity
+           .add(entity.acceleration.multiply(time));
   }
 
   private static bounceVertically(entity) {
-    entity.position.y = Physics.ground_y - (entity.position.y - Physics.ground_y);
-    entity.velocity.y *= -1;
+    var timeToBounce = Physics.getRootsForQuadratic(
+      entity.acceleration.y * 0.5,
+      entity.velocity.y,
+      entity.position.y - Physics.ground_y
+    )[0];
+    var velocityAfterBounce = Physics.getVelocityAfter(timeToBounce, entity).multiply(-1);
+    entity.velocity = velocityAfterBounce;
+    entity.position.y = Physics.ground_y;
+    var timeAfterBounce = Physics.refresh_rate_seconds - timeToBounce;
+    entity.velocity = Physics.getVelocityAfter(timeAfterBounce, entity);
+    entity.position = Physics.getPositionAfter(timeAfterBounce, entity);
+  }
+
+  private static getRootsForQuadratic(a, b, c): number[] {
+    var determinant = Math.sqrt(b ** 2 - 4 * a * c);
+    var firstRoot = (- b + determinant) / (2 * a);
+    var secondRoot = (- b - determinant) / (2 * a);
+    return [firstRoot, secondRoot];
   }
 
 }
@@ -91,8 +116,8 @@ class Game {
 }
 new Game(
   [
-    new Box(new Point(0, 300), new Point(0, 0), Physics.gravity, new Point(10, 10)),
-    new Box(new Point(0, 450), new Point(0, 0), Physics.gravity, new Point(10, 10))
+    new Box(new Point(0, 0), new Point(0, 0), Physics.gravity, new Point(10, 10)),
+    new Box(new Point(0, 300), new Point(0, 0), Physics.gravity, new Point(10, 10))
   ],
   document.getElementById("canvas")
 );
